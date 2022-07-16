@@ -1,0 +1,1 @@
+Copyright (C) 2022 Hüseyin Burak Gürdal(husejinbg@gmail.com) All rights reserved.

